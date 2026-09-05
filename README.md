@@ -25,7 +25,26 @@ not part of the public integration surface.
 
 ## Getting started
 
-See docs/architecture.md for the system architecture and integration boundary. A full getting-started guide is in progress.
+See docs/architecture.md for the system architecture and integration boundary.
+
+A reference Python SDK is available in `sdk/python/`. Install it locally:
+
+```bash
+pip install -e sdk/python
+```
+
+```python
+from hubvery_sdk import HubveryClient, TaskRequest
+
+client = HubveryClient(client_id="...", client_secret="...")
+task = client.submit_task(
+    TaskRequest(capability_id="your-capability", input={"message": "hello"})
+)
+print(task.status)
+```
+
+See `sdk/python/README.md` for details. A full getting-started guide
+covering capability registration end-to-end is in progress.
 
 ## License
 
