@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.hubvery.com/v0/error.schema.json",
+  "title": "Error",
+  "description": "Problem Details error object, based on RFC 7807.",
+  "type": "object",
+  "required": ["type", "title", "status"],
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "type": "string",
+      "format": "uri",
+      "description": "A URI identifying the error category. See docs/errors.md for the full catalog."
+    },
+    "title": {
+      "type": "string",
+      "description": "Short, human-readable summary of the error."
+    },
+    "status": {
+      "type": "integer",
+      "description": "HTTP status code."
+    },
+    "detail": {
+      "type": "string",
+      "description": "Human-readable explanation specific to this occurrence."
+    },
+    "instance": {
+      "type": "string",
+      "description": "URI reference identifying the specific occurrence, typically the task_id."
+    },
+    "code": {
+      "type": "string",
+      "description": "Stable machine-readable error code for programmatic handling."
+    }
+  }
+}
