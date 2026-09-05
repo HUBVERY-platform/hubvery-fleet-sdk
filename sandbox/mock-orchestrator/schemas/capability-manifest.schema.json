@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.hubvery.com/v0/capability-manifest.schema.json",
+  "title": "Capability Manifest",
+  "description": "Declares a single capability that a partner is registering with HUBVERY.",
+  "type": "object",
+  "required": ["capability_id", "name", "version", "modality", "input_schema", "output_schema"],
+  "additionalProperties": false,
+  "properties": {
+    "capability_id": {
+      "type": "string",
+      "description": "Stable, partner-assigned identifier for this capability. Must be unique within the partner's namespace.",
+      "pattern": "^[a-z0-9][a-z0-9-]{2,63}$"
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable name shown in the capability registry.",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "description": {
+      "type": "string",
+      "description": "Short description of what this capability does.",
+      "maxLength": 500
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version of this capability manifest.",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "modality": {
+      "type": "string",
+      "description": "Primary input/output modality of this capability.",
+      "enum": ["text", "image", "audio", "video", "structured", "multimodal"]
+    },
+    "input_schema": {
+      "type": "object",
+      "description": "JSON Schema describing valid task input for this capability.",
+      "minProperties": 1
+    },
+    "output_schema": {
+      "type": "object",
+      "description": "JSON Schema describing the result payload this capability returns on success.",
+      "minProperties": 1
+    },
+    "constraints": {
+      "type": "object",
+      "description": "Operational limits HUBVERY should respect when routing tasks to this capability.",
+      "additionalProperties": false,
+      "properties": {
+        "max_input_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3600
+        },
+        "supports_human_in_the_loop": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "auth_scopes": {
+      "type": "array",
+      "description": "OAuth2 scopes required to submit a task to this capability.",
+      "items": { "type": "string" },
+      "minItems": 1
+    }
+  }
+}
