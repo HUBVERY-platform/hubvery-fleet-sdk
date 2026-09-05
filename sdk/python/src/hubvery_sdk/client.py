@@ -11,7 +11,7 @@ from typing import Any
 
 import httpx
 
-from .auth import TokenManager
+from .auth import DEFAULT_TOKEN_URL, TokenManager
 from .exceptions import HubveryAPIError
 from .models import CapabilityManifest, Error, Task, TaskRequest
 
@@ -35,11 +35,15 @@ class HubveryClient:
         client_id: str,
         client_secret: str,
         base_url: str = DEFAULT_BASE_URL,
+        token_url: str | None = None,
         scopes: list[str] | None = None,
     ) -> None:
         self._http = httpx.Client(base_url=base_url)
         self._tokens = TokenManager(
-            client_id, client_secret, scopes or ["tasks:submit", "tasks:read"]
+            client_id,
+            client_secret,
+            scopes or ["tasks:submit", "tasks:read"],
+            token_url=token_url or DEFAULT_TOKEN_URL,
         )
 
     def _headers(self) -> dict[str, str]:
@@ -105,11 +109,15 @@ class AsyncHubveryClient:
         client_id: str,
         client_secret: str,
         base_url: str = DEFAULT_BASE_URL,
+        token_url: str | None = None,
         scopes: list[str] | None = None,
     ) -> None:
         self._http = httpx.AsyncClient(base_url=base_url)
         self._tokens = TokenManager(
-            client_id, client_secret, scopes or ["tasks:submit", "tasks:read"]
+            client_id,
+            client_secret,
+            scopes or ["tasks:submit", "tasks:read"],
+            token_url=token_url or DEFAULT_TOKEN_URL,
         )
 
     async def _headers(self) -> dict[str, str]:
