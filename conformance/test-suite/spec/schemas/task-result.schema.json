@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.hubvery.com/v0/task-result.schema.json",
+  "title": "Task",
+  "description": "Represents the full state of a task, as returned by GET /tasks/{id}.",
+  "type": "object",
+  "required": ["task_id", "capability_id", "status", "created_at", "updated_at"],
+  "additionalProperties": false,
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "description": "Server-assigned unique identifier for this task."
+    },
+    "capability_id": {
+      "type": "string",
+      "description": "The capability this task was submitted to."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["queued", "running", "requires_input", "completed", "failed", "cancelled"]
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "input": {
+      "type": "object",
+      "description": "Echo of the original task input."
+    },
+    "result": {
+      "type": ["object", "null"],
+      "description": "Present when status is completed. Conforms to the capability's output_schema."
+    },
+    "error": {
+      "description": "Present when status is failed. See error.schema.json.",
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "error.schema.json" }
+      ]
+    }
+  }
+}
