@@ -8,7 +8,7 @@ external agents, services, and tools to the HUBVERY orchestration platform.
 This repository is under active development. The API specification and
 SDKs are pre-1.0 and may change before the first stable release.
 
-## What this repository is
+## This Repo is
 
 - The public integration contract, meaning an API specification, schemas,
   and event definitions, for registering a capability with HUBVERY and
@@ -17,7 +17,7 @@ SDKs are pre-1.0 and may change before the first stable release.
 - A conformance test suite for validating a partner integration.
 - A local sandbox for developing against without a live HUBVERY environment.
 
-## What this repository is not
+## The Repo Isn't
 
 This repository does not contain HUBVERY's orchestration engine. Routing,
 capability selection, planning, and pricing logic are proprietary and are
