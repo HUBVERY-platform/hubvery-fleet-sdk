@@ -24,7 +24,6 @@ def _raise_for_problem_json(response: httpx.Response) -> None:
             error = Error.model_validate(response.json())
         except Exception:
             response.raise_for_status()
-            return
         raise HubveryAPIError(error)
 
 

@@ -306,3 +306,167 @@ def test_submit_task_with_optional_fields():
     payload = json.loads(sent_body)
     assert payload["callback_url"] == "https://partner.example.com/webhooks"
     assert payload["idempotency_key"] == "request-42"
+
+
+@respx.mock
+def test_sync_close_and_context_manager():
+    with HubveryClient(client_id="id", client_secret="secret") as client:
+        assert client._http.is_closed is False
+    assert client._http.is_closed is True
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_async_get_health():
+    respx.get(f"{BASE_URL}/health").mock(
+        return_value=httpx.Response(200, json={"status": "ok"})
+    )
+
+    client = AsyncHubveryClient(client_id="id", client_secret="secret")
+    health = await client.get_health()
+    await client.aclose()
+
+    assert health == {"status": "ok"}
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_async_register_capability_success():
+    from hubvery_sdk.models import CapabilityManifest, Modality
+
+    _mock_token_response(respx)
+    manifest_payload = {
+        "capability_id": "echo-tool",
+        "name": "Echo Tool",
+        "version": "0.1.0",
+        "modality": "text",
+        "input_schema": {"type": "object"},
+        "output_schema": {"type": "object"},
+    }
+    respx.post(f"{BASE_URL}/capabilities").mock(
+        return_value=httpx.Response(201, json=manifest_payload)
+    )
+
+    client = AsyncHubveryClient(client_id="id", client_secret="secret")
+    manifest = await client.register_capability(
+        CapabilityManifest(
+            capability_id="echo-tool",
+            name="Echo Tool",
+            version="0.1.0",
+            modality=Modality.TEXT,
+            input_schema={"type": "object"},
+            output_schema={"type": "object"},
+        )
+    )
+    await client.aclose()
+
+    assert manifest.capability_id == "echo-tool"
+    assert manifest.modality == Modality.TEXT
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_async_get_capability_success():
+    _mock_token_response(respx)
+    respx.get(f"{BASE_URL}/capabilities/echo-tool").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "capability_id": "echo-tool",
+                "name": "Echo Tool",
+                "version": "0.1.0",
+                "modality": "text",
+                "input_schema": {"type": "object"},
+                "output_schema": {"type": "object"},
+            },
+        )
+    )
+
+    client = AsyncHubveryClient(client_id="id", client_secret="secret")
+    manifest = await client.get_capability("echo-tool")
+    await client.aclose()
+
+    assert manifest.capability_id == "echo-tool"
+    assert manifest.name == "Echo Tool"
+
+
+@respx.mock
+def test_get_task_success():
+    _mock_token_response(respx)
+    respx.get(f"{BASE_URL}/tasks/task_abc").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "task_id": "task_abc",
+                "capability_id": "echo-tool",
+                "status": "completed",
+                "created_at": "2026-01-01T00:00:00Z",
+                "updated_at": "2026-01-01T00:05:00Z",
+                "result": {"output": "hello"},
+            },
+        )
+    )
+
+    client = HubveryClient(client_id="id", client_secret="secret")
+    task = client.get_task("task_abc")
+
+    assert task.task_id == "task_abc"
+    assert task.status == TaskStatus.COMPLETED
+    assert task.result == {"output": "hello"}
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_async_get_task_success():
+    _mock_token_response(respx)
+    respx.get(f"{BASE_URL}/tasks/task_abc").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "task_id": "task_abc",
+                "capability_id": "echo-tool",
+                "status": "completed",
+                "created_at": "2026-01-01T00:00:00Z",
+                "updated_at": "2026-01-01T00:05:00Z",
+                "result": {"output": "hello"},
+            },
+        )
+    )
+
+    client = AsyncHubveryClient(client_id="id", client_secret="secret")
+    task = await client.get_task("task_abc")
+    await client.aclose()
+
+    assert task.task_id == "task_abc"
+    assert task.status == TaskStatus.COMPLETED
+    assert task.result == {"output": "hello"}
+
+
+def test_token_request_failure_raises_auth_error():
+    import respx as respx_module
+    from hubvery_sdk.auth import TokenManager
+    from hubvery_sdk.exceptions import HubveryAuthError
+
+    with respx_module.mock:
+        respx_module.post(TOKEN_URL).mock(
+            return_value=httpx.Response(401, text="invalid client credentials")
+        )
+        manager = TokenManager("bad-id", "bad-secret", scopes=["tasks:read"])
+        with httpx.Client() as http:
+            with pytest.raises(HubveryAuthError, match="Token request failed"):
+                manager.get_token_sync(http)
+
+
+def test_token_response_missing_access_token_raises_auth_error():
+    import respx as respx_module
+    from hubvery_sdk.auth import TokenManager
+    from hubvery_sdk.exceptions import HubveryAuthError
+
+    with respx_module.mock:
+        respx_module.post(TOKEN_URL).mock(
+            return_value=httpx.Response(200, json={"token_type": "bearer"})
+        )
+        manager = TokenManager("id", "secret", scopes=["tasks:read"])
+        with httpx.Client() as http:
+            with pytest.raises(HubveryAuthError, match="missing 'access_token'"):
+                manager.get_token_sync(http)
