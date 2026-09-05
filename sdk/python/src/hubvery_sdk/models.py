@@ -1,9 +1,7 @@
 """Pydantic models mirroring spec/schemas/*.schema.json.
 
-These models intentionally use additionalProperties-equivalent strictness
-(extra="forbid") to match the JSON Schema files exactly. If the schemas
-change, these models must be updated to match; they are not generated
-automatically.
+Uses extra="forbid" throughout to match each schema's
+additionalProperties: false constraint.
 """
 
 from __future__ import annotations

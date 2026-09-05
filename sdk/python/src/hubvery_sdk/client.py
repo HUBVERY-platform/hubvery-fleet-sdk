@@ -1,9 +1,8 @@
 """Sync and async clients for the HUBVERY Fleet API.
 
-Built directly against spec/openapi.yaml (operationIds: getHealth,
+Covers the five operations defined in spec/openapi.yaml: getHealth,
 listCapabilities, registerCapability, getCapability, submitTask,
-getTask). If openapi.yaml changes, these methods need to be updated
-to match; nothing here is auto-generated.
+and getTask.
 """
 
 from __future__ import annotations

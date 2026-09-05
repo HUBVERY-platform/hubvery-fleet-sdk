@@ -1,9 +1,8 @@
 """OAuth2 client credentials flow for the HUBVERY API.
 
-Deliberately implemented as an explicit token manager rather than an
-httpx.Auth subclass, since the exact httpx.Auth interface has changed
-across versions. Verify httpx's current Auth API in its docs if you
-want to switch to that pattern later.
+Implemented as an explicit token manager rather than an httpx.Auth
+subclass, so the refresh logic and expiry buffer stay simple and
+easy to unit test in isolation.
 """
 
 from __future__ import annotations
@@ -77,9 +76,7 @@ class TokenManager:
             expires_in = payload.get("expires_in", 3600)
         except KeyError as exc:
             raise HubveryAuthError(
-                "Token response missing 'access_token'; verify HUBVERY's "
-                "token endpoint response shape, it is not fully specified "
-                "in this repository's OpenAPI file."
+                f"Token response missing 'access_token': {payload}"
             ) from exc
         self._access_token = access_token
         self._expires_at = time.time() + expires_in
