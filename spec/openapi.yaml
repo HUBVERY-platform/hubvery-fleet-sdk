@@ -1,0 +1,171 @@
+openapi: 3.1.0
+info:
+  title: HUBVERY Fleet API
+  version: 0.1.0
+  description: >
+    Public API for registering capabilities with HUBVERY and submitting
+    tasks to them. This specification covers the partner integration
+    surface only. It does not describe HUBVERY's internal orchestration,
+    routing, or pricing behavior.
+  contact:
+    name: HUBVERY Platform Team
+    email: request@hubvery.com
+
+servers:
+  - url: https://api.hubvery.com/v0
+    description: Production
+  - url: http://localhost:4000
+    description: Local sandbox (see sandbox/mock-orchestrator)
+
+security:
+  - oauth2: []
+
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Service health check
+      security: []
+      responses:
+        "200":
+          description: Service is healthy.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+
+  /capabilities:
+    get:
+      operationId: listCapabilities
+      summary: List registered capabilities
+      responses:
+        "200":
+          description: A page of registered capabilities.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "./schemas/capability-manifest.schema.json"
+    post:
+      operationId: registerCapability
+      summary: Register a new capability
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "./schemas/capability-manifest.schema.json"
+      responses:
+        "201":
+          description: Capability registered.
+          content:
+            application/json:
+              schema:
+                $ref: "./schemas/capability-manifest.schema.json"
+        "409":
+          description: A capability with this capability_id already exists for this partner.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "./schemas/error.schema.json"
+
+  /capabilities/{capability_id}:
+    get:
+      operationId: getCapability
+      summary: Retrieve a single registered capability
+      parameters:
+        - name: capability_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The requested capability.
+          content:
+            application/json:
+              schema:
+                $ref: "./schemas/capability-manifest.schema.json"
+        "404":
+          description: No capability found with this id.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "./schemas/error.schema.json"
+
+  /tasks:
+    post:
+      operationId: submitTask
+      summary: Submit a task to a registered capability
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "./schemas/task-request.schema.json"
+      responses:
+        "202":
+          description: Task accepted and queued.
+          content:
+            application/json:
+              schema:
+                $ref: "./schemas/task-result.schema.json"
+        "400":
+          description: Task input failed validation against the capability's input_schema.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "./schemas/error.schema.json"
+        "404":
+          description: No capability found with the given capability_id.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "./schemas/error.schema.json"
+
+  /tasks/{task_id}:
+    get:
+      operationId: getTask
+      summary: Retrieve the current state of a task
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Current task state.
+          content:
+            application/json:
+              schema:
+                $ref: "./schemas/task-result.schema.json"
+        "404":
+          description: No task found with this id.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "./schemas/error.schema.json"
+
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.hubvery.com/oauth/token
+          scopes:
+            capabilities:read: Read registered capabilities.
+            capabilities:write: Register or update capabilities.
+            tasks:submit: Submit tasks.
+            tasks:read: Read task status and results.
