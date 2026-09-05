@@ -170,3 +170,139 @@ def test_error_response_without_valid_problem_json_still_raises():
 
     with pytest.raises(httpx.HTTPStatusError):
         client.get_task("broken")
+
+
+from hubvery_sdk.client import AsyncHubveryClient
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_async_submit_task_success():
+    _mock_token_response(respx)
+    respx.post(f"{BASE_URL}/tasks").mock(
+        return_value=httpx.Response(
+            202,
+            json={
+                "task_id": "task_abc",
+                "capability_id": "echo-tool",
+                "status": "queued",
+                "created_at": "2026-01-01T00:00:00Z",
+                "updated_at": "2026-01-01T00:00:00Z",
+            },
+        )
+    )
+
+    client = AsyncHubveryClient(client_id="id", client_secret="secret")
+    task = await client.submit_task(
+        TaskRequest(capability_id="echo-tool", input={"message": "hello"})
+    )
+    await client.aclose()
+
+    assert task.task_id == "task_abc"
+    assert task.status == TaskStatus.QUEUED
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_async_get_task_not_found_raises_api_error():
+    _mock_token_response(respx)
+    respx.get(f"{BASE_URL}/tasks/does-not-exist").mock(
+        return_value=httpx.Response(
+            404,
+            json={
+                "type": "https://errors.hubvery.com/task-not-found",
+                "title": "Task not found",
+                "status": 404,
+                "detail": "No task found with this id.",
+            },
+        )
+    )
+
+    client = AsyncHubveryClient(client_id="id", client_secret="secret")
+
+    with pytest.raises(HubveryAPIError) as exc_info:
+        await client.get_task("does-not-exist")
+    await client.aclose()
+
+    assert exc_info.value.status == 404
+    assert exc_info.value.title == "Task not found"
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_async_token_is_cached_across_requests():
+    token_route = respx.post(TOKEN_URL).mock(
+        return_value=httpx.Response(
+            200,
+            json={"access_token": "fake-token-123", "expires_in": 3600},
+        )
+    )
+    respx.get(f"{BASE_URL}/capabilities").mock(
+        return_value=httpx.Response(200, json={"items": []})
+    )
+
+    client = AsyncHubveryClient(client_id="id", client_secret="secret")
+    await client.list_capabilities()
+    await client.list_capabilities()
+    await client.aclose()
+
+    assert token_route.call_count == 1
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_async_context_manager_closes_client():
+    _mock_token_response(respx)
+    respx.get(f"{BASE_URL}/capabilities").mock(
+        return_value=httpx.Response(200, json={"items": []})
+    )
+
+    async with AsyncHubveryClient(client_id="id", client_secret="secret") as client:
+        result = await client.list_capabilities()
+        assert result == []
+
+
+@respx.mock
+def test_get_health():
+    respx.get(f"{BASE_URL}/health").mock(
+        return_value=httpx.Response(200, json={"status": "ok"})
+    )
+
+    client = HubveryClient(client_id="id", client_secret="secret")
+    health = client.get_health()
+
+    assert health == {"status": "ok"}
+
+
+@respx.mock
+def test_submit_task_with_optional_fields():
+    _mock_token_response(respx)
+    respx.post(f"{BASE_URL}/tasks").mock(
+        return_value=httpx.Response(
+            202,
+            json={
+                "task_id": "task_xyz",
+                "capability_id": "echo-tool",
+                "status": "queued",
+                "created_at": "2026-01-01T00:00:00Z",
+                "updated_at": "2026-01-01T00:00:00Z",
+            },
+        )
+    )
+
+    client = HubveryClient(client_id="id", client_secret="secret")
+    client.submit_task(
+        TaskRequest(
+            capability_id="echo-tool",
+            input={"message": "hello"},
+            callback_url="https://partner.example.com/webhooks",
+            idempotency_key="request-42",
+        )
+    )
+
+    sent_body = respx.calls.last.request.content
+    import json
+
+    payload = json.loads(sent_body)
+    assert payload["callback_url"] == "https://partner.example.com/webhooks"
+    assert payload["idempotency_key"] == "request-42"
