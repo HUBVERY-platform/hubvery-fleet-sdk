@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.hubvery.com/v0/task-request.schema.json",
+  "title": "Task Request",
+  "description": "Request body for submitting a task to a registered capability.",
+  "type": "object",
+  "required": ["capability_id", "input"],
+  "additionalProperties": false,
+  "properties": {
+    "capability_id": {
+      "type": "string",
+      "description": "The capability_id of a previously registered capability."
+    },
+    "input": {
+      "type": "object",
+      "description": "Task input, validated against the target capability's input_schema."
+    },
+    "callback_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Optional HTTPS endpoint HUBVERY will POST task events to, as CloudEvents envelopes."
+    },
+    "idempotency_key": {
+      "type": "string",
+      "description": "Optional client-supplied key. Submitting the same key twice returns the original task instead of creating a duplicate.",
+      "maxLength": 128
+    }
+  }
+}

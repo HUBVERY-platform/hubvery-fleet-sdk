@@ -10,3 +10,5 @@ dist/
 build/
 *.log
 .DS_Store
+.coverage
+.pytest_cache/
