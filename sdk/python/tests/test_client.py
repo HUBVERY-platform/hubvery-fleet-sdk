@@ -95,3 +95,78 @@ def test_token_is_cached_across_requests():
     # Two API calls, but the token endpoint should only be hit once,
     # since the token has not expired between calls.
     assert token_route.call_count == 1
+
+
+@respx.mock
+def test_register_capability_success():
+    _mock_token_response(respx)
+    manifest_payload = {
+        "capability_id": "echo-tool",
+        "name": "Echo Tool",
+        "version": "0.1.0",
+        "modality": "text",
+        "input_schema": {"type": "object"},
+        "output_schema": {"type": "object"},
+    }
+    respx.post(f"{BASE_URL}/capabilities").mock(
+        return_value=httpx.Response(201, json=manifest_payload)
+    )
+
+    from hubvery_sdk.models import CapabilityManifest, Modality
+
+    client = HubveryClient(client_id="id", client_secret="secret")
+    manifest = client.register_capability(
+        CapabilityManifest(
+            capability_id="echo-tool",
+            name="Echo Tool",
+            version="0.1.0",
+            modality=Modality.TEXT,
+            input_schema={"type": "object"},
+            output_schema={"type": "object"},
+        )
+    )
+
+    assert manifest.capability_id == "echo-tool"
+    assert manifest.modality == Modality.TEXT
+
+
+@respx.mock
+def test_get_capability_success():
+    _mock_token_response(respx)
+    respx.get(f"{BASE_URL}/capabilities/echo-tool").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "capability_id": "echo-tool",
+                "name": "Echo Tool",
+                "version": "0.1.0",
+                "modality": "text",
+                "input_schema": {"type": "object"},
+                "output_schema": {"type": "object"},
+            },
+        )
+    )
+
+    client = HubveryClient(client_id="id", client_secret="secret")
+    manifest = client.get_capability("echo-tool")
+
+    assert manifest.capability_id == "echo-tool"
+    assert manifest.name == "Echo Tool"
+
+
+@respx.mock
+def test_error_response_without_valid_problem_json_still_raises():
+    # Simulates an upstream proxy or unexpected server error that returns
+    # a 500 with a body that does NOT conform to error.schema.json (e.g.
+    # a plain-text or malformed error page). The client should not crash
+    # trying to parse it as an Error model; it should fall back to
+    # httpx's own raise_for_status behavior.
+    _mock_token_response(respx)
+    respx.get(f"{BASE_URL}/tasks/broken").mock(
+        return_value=httpx.Response(500, text="Internal Server Error")
+    )
+
+    client = HubveryClient(client_id="id", client_secret="secret")
+
+    with pytest.raises(httpx.HTTPStatusError):
+        client.get_task("broken")
