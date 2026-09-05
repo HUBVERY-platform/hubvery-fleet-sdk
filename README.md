@@ -25,7 +25,7 @@ not part of the public integration surface.
 
 ## Getting started
 
-Documentation is in progress. See docs/getting-started.md once published.
+See docs/architecture.md for the system architecture and integration boundary. A full getting-started guide is in progress.
 
 ## License
 
